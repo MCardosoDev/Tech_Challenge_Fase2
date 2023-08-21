@@ -17,24 +17,26 @@ def convert_volume(volume_str):
         return int(volume_str)
 
 def plot_ts(df):
-    fig = sp.make_subplots(rows=3, cols=2, subplot_titles=[
+    fig = sp.make_subplots(rows=4, cols=2, subplot_titles=[
         'Variação do Último Fechamento', 'Variação de Aberturas',
         'Valor Máximo no dia', 'Valor Mínimo do dia',
         'Volume de Ações no dia', 'Variação das Ações no dia'
     ])
-
     fig.add_trace(go.Scatter(x=df.index, y=df['Último'], mode='lines', line=dict(color='blue')), row=1, col=1)
     fig.add_trace(go.Scatter(x=df.index, y=df['Abertura'], mode='lines', line=dict(color='green')), row=1, col=2)
     fig.add_trace(go.Scatter(x=df.index, y=df['Máxima'], mode='lines', line=dict(color='orange')), row=2, col=1)
     fig.add_trace(go.Scatter(x=df.index, y=df['Mínima'], mode='lines', line=dict(color='red')), row=2, col=2)
     fig.add_trace(go.Scatter(x=df.index, y=df['Vol.'], mode='lines', line=dict(color='purple')), row=3, col=1)
     fig.add_trace(go.Scatter(x=df.index, y=df['Var%'], mode='lines', line=dict(color='cyan')), row=3, col=2)
-
     for i in range(1, 4):
         fig.update_xaxes(title_text='Data', row=i, col=2)
         fig.update_yaxes(title_text='Valor', row=i, col=1)
 
     fig.update_layout(title='Variações e Volumes das Ações', showlegend=False)
+    fig.update_layout(
+        width=600,
+        height=800
+    )
     return fig
 
 def decompose(df, title):
@@ -64,6 +66,10 @@ def decompose(df, title):
     fig.add_trace(go.Scatter(x=fig_resid.data[0]['x'], y=fig_resid.data[0]['y'], showlegend=False), row=4, col=1) # type: ignore
     fig.update_xaxes(title_text='Data', row=4, col=1)
     fig.update_layout(title=title, font=dict(size=12))
+    fig.update_layout(
+        width=600,
+        height=600
+    )
     return fig
 
 def test_adfuller(df):
@@ -176,7 +182,6 @@ def acf_pacf(df):
 def plot_error(df, erro, label, title):
     df_sorted = df.sort_values(by=erro, ascending=True)
     num_models = len(df_sorted)
-
     custom_color_palette = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
                             '#e377c2', '#7f7f7f', '#bcbd22', '#17becf', '#aec7e8', '#ffbb78',
                             '#98df8a', '#ff9896', '#c5b0d5', '#c49c94', '#f7b6d2', '#c7c7c7',
@@ -184,14 +189,12 @@ def plot_error(df, erro, label, title):
                             '#c5b0d5', '#c49c94', '#f7b6d2', '#c7c7c7']
 
     color_scale = custom_color_palette[:num_models][::-1]
-
     fig = px.bar(df_sorted, y=erro, x='model',
                 labels={erro: label, 'model': 'Modelo'},
                 title=title,
                 text=df_sorted[erro].apply(lambda x: f'{x:.4%}'),
                 color=df_sorted['model'],
                 color_discrete_sequence=color_scale)
-
     fig.update_layout(
         yaxis_tickformat=".0%",
         yaxis_title=label,
@@ -200,7 +203,10 @@ def plot_error(df, erro, label, title):
         margin=dict(l=0, r=0, t=50, b=0),
         showlegend=False
     )
-
     fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
     fig.update_xaxes(showgrid=False)
+    fig.update_layout(
+        width=600,
+        height=400
+    )
     return fig
