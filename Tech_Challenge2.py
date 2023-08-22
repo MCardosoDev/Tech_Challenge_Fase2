@@ -2,22 +2,25 @@
 import pandas as pd
 import numpy as np
 import streamlit as st
+import matplotlib.pyplot as plt
 from statsmodels.tsa.stattools import adfuller
 from Utils import (
-    convert_volume,
     plot_ts,
     decompose,
-    test_adfuller,
     data_diff,
-    test_diff_adfuller,
-    mape_error,
-    wmape_error,
-    smape_error,
     acf_pacf,
     plot_error
 )
+from statsforecast import StatsForecast
+from statsforecast.models import SeasonalExponentialSmoothingOptimized
 #%%
 df = pd.read_csv('df.csv')
+train = pd.read_csv('train.csv')
+train['ds'] = pd.to_datetime(train['ds'])
+test = pd.read_csv('test.csv')
+test['ds'] = pd.to_datetime(test['ds'])
+h = test.index.nunique()
+#%%
 columns_to_print = ['Data', 'Último', 'Abertura', 'Máxima', 'Mínima', 'Vol.', 'Var%']
 df_erros = pd.read_csv('Data/Errors.csv')
 df_erros_prophet = pd.read_csv('Data/ErrorsProphet.csv')
@@ -54,11 +57,16 @@ mape_explanation = "O MAPE (Mean Absolute Percentage Error) calcula a média das
 wmape_explanation = "O WMAPE (Weighted Mean Absolute Percentage Error) é uma variação do MAPE que pondera os erros pela magnitude dos valores verdadeiros."
 smape_explanation = "O SMAPE (Symmetric Mean Absolute Percentage Error) é uma métrica que considera a simetria dos erros, levando em conta a magnitude dos valores verdadeiros e das previsões."
 #%%
-
+model = StatsForecast(models=[SeasonalExponentialSmoothingOptimized(season_length=h)], freq='D', n_jobs=-1)
+model.fit(train)
+forecast = model.predict(h=h, level=[95])
+forecast = forecast.reset_index().merge(test, on=['ds', 'unique_id'], how='left')
+forecast.dropna(inplace=True)
+#%%
 def main():
     st.set_page_config(layout="wide")
     st.title('Análise de fechamento diário da IBOVESPA')
-    tab0, tab1, tab2, tab3, tab4, tab5 = st.tabs(['Geral', 'Dados Históricos - IBOVESPA', 'Diferenciação da Série', 'ACF e PCF', 'Avaliação', 'Melhor Modelo'])
+    tab0, tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(['Geral', 'Dados Históricos - IBOVESPA', 'Diferenciação da Série', 'ACF e PCF', 'Avaliação', 'Melhores Modelos', 'Melhor Modelo'])
 
     with tab0:
         '''
@@ -124,7 +132,7 @@ def main():
     with tab2:
         '''
         ## Diferenciação da Série Temporal
-            - Remover tendencia e sazonalidade, fazer a aproximação(transformada logaritmo e subtrair da média móvel)
+            - Remover tendência e sazonalidade, fazer a aproximação(transformada logaritmo e subtrair da média móvel)
             - Média móvel aplicada a linha da tendencia
             - Janela móvel de tamanho 12 meses é aplicada sobre os dados
             - Aplicar log
@@ -160,6 +168,7 @@ def main():
         st.write("  Ordem de diferenciação **D** = 1 (Foi necessária 1 diferenciação para tornar a série estacionaria)")
         st.write("  **Q acf** = 0.915")
         st.write("  **P pacf** = 0.915")
+
     with tab4:
         '''
         # Avaliação dos modelos
@@ -177,10 +186,86 @@ def main():
         st.plotly_chart(plot_error(df_mesclado, 'mape', 'MAPE', 'MAPE (Mean Absolute Percentage Error)'), use_container_width = True)
         st.plotly_chart(plot_error(df_mesclado, 'wmape', 'wMAPE', 'wMAPE (Weighted Mean Absolute Percentage Error)'), use_container_width = True)
         st.plotly_chart(plot_error(df_mesclado, 'smape', 'sMAPE', 'sMAPE (Weighted Mean Absolute Percentage Error)'), use_container_width = True)
+
     with tab5:
         '''
-        ## Análise dos Dados
+        ## Explicação de Modelos de Previsão de Séries Temporais
         '''
+        intro_text = (
+            "Este aplicativo apresenta explicações dos seguintes modelos de previsão de séries temporais que são amplamente usados para avaliação:"
+            "\n\n1. Múltiplas modelos da `statsforecast`."
+            "\n2. SARIMAX do módulo `statsmodels`."
+            "\n3. Rede Neural LSTM (Long Short-Term Memory) `tensorflow`."
+            "\n4. Prophet, uma biblioteca de previsão desenvolvida pelo Facebook."
+        )
+        model_explanations = {
+            "Window Average (Média Móvel Simples)":
+                "O método da Média Móvel Simples calcula a média dos valores em uma janela móvel de tamanho fixo ao longo da série temporal. "
+                "Ele suaviza flutuações de curto prazo, revelando tendências subjacentes.",
+
+            "Holt-Winters":
+                "O método de Holt-Winters é uma técnica de suavização exponencial tripla que considera três componentes: nível, tendência e sazonalidade. "
+                "Ele modela séries temporais com tendência e padrões sazonais.",
+
+            "TSB (Triple Seasonal Box-Jenkins)":
+                "O TSB é uma extensão do método ARIMA que incorpora múltiplos componentes sazonais para modelar séries temporais com sazonalidades complexas.",
+
+            "AutoTheta":
+                "O AutoTheta é uma versão automatizada do método Theta, que é uma técnica de suavização exponencial dupla para séries temporais com sazonalidade aditiva.",
+
+            "CES (Croston's Exponential Smoothing)":
+                "O método CES é usado para prever a demanda de itens esporádicos ou intermitentes, considerando componentes de nível e probabilidade de demanda.",
+
+            "AutoARIMA":
+                "O AutoARIMA é uma abordagem automatizada que determina automaticamente os melhores parâmetros do modelo ARIMA para uma série temporal.",
+
+            "Dynamic Optimized Theta":
+                "O Dynamic Optimized Theta otimiza dinamicamente os parâmetros de suavização Theta para se adaptar às características específicas da série temporal.",
+
+            "SESOpt (Simple Exponential Smoothing Otimizado)":
+                "O SESOt é uma variação do SES que otimiza automaticamente os parâmetros de suavização exponencial para melhor se ajustar aos dados da série temporal.",
+
+            "SarimaX":
+                "O SarimaX é uma extensão do modelo SARIMA que permite a inclusão de covariáveis externas para melhorar a precisão das previsões.",
+
+            "LSTM (Long Short-Term Memory)":
+                "O LSTM é um modelo de rede neural recorrente capaz de capturar dependências de longo prazo em sequências temporais.",
+
+            "Prophet":
+                "O Prophet é uma biblioteca de previsão desenvolvida pelo Facebook, projetada para séries temporais com tendências sazonais e feriados. "
+                "É indicado para modelagem sem conhecimento profundo em análise de séries temporais."
+        }
+
+        col1, col2 = st.columns([1, 2])
+
+        with col1:
+            selected_model = st.radio("Selecione um modelo", list(model_explanations.keys()))
+
+        with col2:
+            st.write(intro_text)
+            st.write("---")
+            st.write(model_explanations[selected_model]) # type: ignore
+    with tab6:
+        '''
+        # Modelo com melhor desempenho
+        '''
+        txt = (
+            "StatsForecast (Seasonal Exponential Smoothing Otimizado)"
+                "\nO modelo StatsForecast utiliza o Seasonal Exponential Smoothing Otimizado da biblioteca StatsForecast para prever séries temporais. "
+                "\nEle considera padrões sazonais e ajusta automaticamente os parâmetros de suavização para se adaptar aos dados. "
+                "\nO parâmetro `season_length` define o comprimento da sazonalidade na série temporal. O modelo é eficaz para séries com padrões sazonais complexos."
+        )
+        st.write(txt)
+        st.code("model = StatsForecast(models=[SeasonalExponentialSmoothingOptimized(season_length=h)], freq='D', n_jobs=-1)")
+        # st.plotly_chart(
+        #     model.plot(
+        #         train,
+        #         forecast,
+        #         level=[95],
+        #         max_insample_length=90,
+        #         plot_anomalies=True
+        #     )
+        # , use_container_width = True)
 
 if __name__ == "__main__":
     main()
