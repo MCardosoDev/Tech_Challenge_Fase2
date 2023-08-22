@@ -2,7 +2,7 @@
 import pandas as pd
 import numpy as np
 import streamlit as st
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 from statsmodels.tsa.stattools import adfuller
 from Utils import (
     plot_ts,
@@ -257,15 +257,16 @@ def main():
         )
         st.write(txt)
         st.code("model = StatsForecast(models=[SeasonalExponentialSmoothingOptimized(season_length=h)], freq='D', n_jobs=-1)")
-        # st.plotly_chart(
-        #     model.plot(
-        #         train,
-        #         forecast,
-        #         level=[95],
-        #         max_insample_length=90,
-        #         plot_anomalies=True
-        #     )
-        # , use_container_width = True)
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=forecast['ds'], y=forecast['y'], mode='lines', name='Original'))
+        fig.add_trace(go.Scatter(x=forecast['ds'], y=forecast['SeasESOpt'], mode='lines', name='Forecast'))
+        fig.update_layout(
+            xaxis_title='Time',
+            yaxis_title='Population',
+            legend=dict(x=0, y=1),
+            xaxis=dict(tickformat='%Y-%m-%d')
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
 if __name__ == "__main__":
     main()
