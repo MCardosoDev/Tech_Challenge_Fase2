@@ -3,9 +3,6 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 import plotly.graph_objects as go
-import plotly.express as px
-import plotly.subplots as sp
-from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.stattools import adfuller
 from Utils import (
     plot_ts,
@@ -75,18 +72,18 @@ forecast.dropna(inplace=True)
 def main():
     st.set_page_config(layout="wide")
     st.title('Análise de fechamento diário da IBOVESPA')
-    tab0, tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(['Geral', 'Dados Históricos - IBOVESPA', 'Diferenciação da Série', 'ACF e PCF', 'Avaliação', 'Melhores Modelos', 'Melhor Modelo'])
+    tab0, tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(['Geral', 'Dados Históricos - IBOVESPA', 'Transformação da Série', 'ACF e PCF', 'Avaliação', 'Melhores Modelos', 'Melhor Modelo'])
 
     with tab0:
         '''
         ## Análise dos Dados para Prever Diariamente o Fechamento da base
 
         Esta análise tem como objetivo utilizar os dados disponíveis sobre as informações da bolsa de valores, 
-        realizar um modelo preditivo, criar uma serie temporal e prever diariamente o fechamento da base.
+        realizar um modelo preditivo, criar uma série temporal e prever diariamente o fechamento da base.
         
         ### Dados Utilizados para análise
 
-        **Análise dos dados históricos da IBOVESPA** - Os dados sobre o histórico da bolsa foram obtidos do investing.
+        *Análise dos dados históricos da IBOVESPA* - Os dados sobre o histórico da bolsa foram obtidos do investing.
 
         - Link: [Dados Históricos - Ibovespa](https://br.investing.com/indices/bovespa-historical-data)
         '''
@@ -97,22 +94,22 @@ def main():
             '<span class="small-font">Dados utilizados de um período entre 2003 até 2023</span>',
         unsafe_allow_html=True)   
         '''
-        ### Diferenciação da série para conversão em uma série estacionaria.
+        ### Diferenciação da série para conversão em uma série estacionária.
         
-        A diferenciação é usada para transformar uma série temporal não estacionária em uma série estacionária. Para **modelos como o ARIMA**, **Remoção de Tendências**, **Estabilização da Variância** e **Eliminação de Sazonalidade**.
+        A diferenciação é usada para transformar uma série temporal não estacionária em uma série estacionária. Para *modelos como o ARIMA, **Remoção de Tendências, **Estabilização da Variância* e *Eliminação de Sazonalidade*.
 
         ### Autocorrelação (ACF) e Autocorrelação parcial (PACF).
         
-        **Função de autocorrelação (ACF) e Função de Autocorrelação parcial (PACF)**. A ACF mede a correlação entre os valores passados e os valores presentes de uma série temporal, levando em consideração todos os atrasos possíveis e identifica padrões de correlação entre observações em diferentes pontos temporais.
+        *Função de autocorrelação (ACF) e Função de Autocorrelação parcial (PACF)*. A ACF mede a correlação entre os valores passados e os valores presentes de uma série temporal, levando em consideração todos os atrasos possíveis e identifica padrões de correlação entre observações em diferentes pontos temporais.
         A PACF mede a correlação direta entre dois pontos temporais, controlando os efeitos dos atrasos intermediários.
 
         ### Teste e Avaliação de modelos preditivos
 
-        **Avaliação dos de modelos para series temporais** - Para encontrar o melhor modelo preditivo utiliza-se testes de erros(MAPE, wMAPE, sMAPE) para avaliar a precisão de acerto de cada modelo.
+        *Avaliação dos de modelos para séries temporais* - Para encontrar o melhor modelo preditivo utiliza-se testes de erros (MAPE, wMAPE, sMAPE) para avaliar a precisão de acerto de cada modelo.
 
         ### Melhor Modelo
 
-        **Escolha do melhor modelo** - Com avaliação do erros cometidos é possível escolher o modelo com melhor desempenho.
+        *Escolha do melhor modelo* - Com avaliação do erros cometidos é possível escolher o modelo com melhor desempenho.
 
         '''
     with tab1:
@@ -140,20 +137,17 @@ def main():
                 with col3:
                     st.write("Resultado")
                     st.write("---")
-                    st.markdown("<span style='color:red'>P-value 49% e teste estatístico maior que os valores criticos: A série não é estacionaria</span>", unsafe_allow_html=True)
+                    st.markdown("<span style='color:red'>P-value 49% e teste estatístico maior que os valores criticos: A série não é estacionária</span>", unsafe_allow_html=True)
     with tab2:
         '''
-        ## Diferenciação da Série Temporal
+        ## Transformação da Série Temporal
 
-        A diferenciação de uma série não estacionária é crucial para transformá-la em uma série estacionária, permitindo a aplicação de técnicas estatísticas e modelos de previsão.
-        Isso é fundamental para compreender padrões temporais e obter previsões mais precisas.
+        Realizar transformações matemáticas em uma série temporal não estacionária para torná-la estacionária permite a aplicação de técnicas estatísticas e modelos de previsão com esse pressuposto.
+        Isso é fundamental para compreender padrões temporais e obter previsões mais precisas. As transformações realizadas na série foram:
 
-            - Remover tendência e sazonalidade, fazer a aproximação(transformada logaritmo e subtrair da média móvel)
-            - Média móvel aplicada a linha da tendencia
-            - Janela móvel de tamanho 12 meses é aplicada sobre os dados
-            - Aplicar log
-            - Subtrair a média móvel
-            - Derivadas de um número de polinômio de primeiro grau deixando mais estacionaria.
+            - Aplicação do Logaritmo, para reduzir flutuações
+            - Subtração da Média Móvel com janela de tamanho 12 meses
+            - Primeira diferenciação, para reduzir tendências
         '''
         st.plotly_chart(data_diff(df_st), use_container_width = True)
         '''
@@ -171,7 +165,7 @@ def main():
                 with col3:
                     st.write("Resultado")
                     st.write("---")
-                    st.markdown("<span style='color:green'>P-value 0.0% e teste estatístico menor que os valores criticos: A série é estacionaria após a diferenciação</span>", unsafe_allow_html=True)
+                    st.markdown("<span style='color:green'>P-value 0.0% e teste estatístico menor que os valores criticos: A série é estacionária após a diferenciação</span>", unsafe_allow_html=True)
 
     with tab3:
         '''
@@ -184,12 +178,12 @@ def main():
 
         - 5% ACF (intervalo de confiança).
         - 1.96/sqrt(N-d)
-            - **N** número de pontos e **d** é o número de vezes que os dados foram diferenciamos (intervalo de confiança para estimativas de autocorrelação significativa).
+            - *N* número de pontos e *d* é o número de vezes que os dados foram diferenciamos (intervalo de confiança para estimativas de autocorrelação significativa).
         '''
         st.plotly_chart(acf_pacf(df_st), use_container_width = True)
-        st.write("  Ordem de diferenciação **D** = 1 (Foi necessária 1 diferenciação para tornar a série estacionaria)")
-        st.write("  **Q acf** = 0.915")
-        st.write("  **P pacf** = 0.915")
+        st.write("  Ordem de diferenciação *D* = 1 (Foi necessária 1 diferenciação para tornar a série estacionaria)")
+        st.write("  *Q acf* = 0.915")
+        st.write("  *P pacf* = 0.915")
 
     with tab4:
         '''
