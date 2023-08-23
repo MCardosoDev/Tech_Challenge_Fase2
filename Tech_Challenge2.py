@@ -3,6 +3,9 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 import plotly.graph_objects as go
+import plotly.express as px
+import plotly.subplots as sp
+from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.stattools import adfuller
 from Utils import (
     plot_ts,
@@ -15,6 +18,11 @@ from statsforecast import StatsForecast
 from statsforecast.models import SeasonalExponentialSmoothingOptimized
 #%%
 df = pd.read_csv('df.csv')
+df_st = df.copy()
+df_st['Data'] = pd.to_datetime(df_st['Data'], format='%Y-%m-%d')
+df_st['ds'] = pd.to_datetime(df_st['ds'], format='%Y-%m-%d')
+df_st.set_index('Data', inplace=True)
+#%%
 train = pd.read_csv('train.csv')
 train['ds'] = pd.to_datetime(train['ds'])
 test = pd.read_csv('test.csv')
@@ -49,6 +57,7 @@ def test_diff_adfuller_streamlit(df):
     st.write(f'Valores criticos:')
     for key, value in result[4].items(): #type: ignore
         st.write(f'\t{key}: {value}')
+
 #%%
 mape_formula = r'MAPE = \frac{1}{n} \sum_{i=1}^{n} \left| \frac{y_{\text{true},i} - y_{\text{pred},i}}{y_{\text{true},i}} \right| \times 100'
 wmape_formula = r'WMAPE = \frac{\sum_{i=1}^{n} \left| y_{\text{true},i} - y_{\text{pred},i} \right|}{\sum_{i=1}^{n} \left| y_{\text{true},i} \right|} \times 100'
@@ -109,9 +118,12 @@ def main():
     with tab1:
         '''
         ## Análise Exploratória de Dados (EDA)
+
+        A decomposição da série temporal é empregada para desmembrar os dados em componentes distintos, como tendência, sazonalidade e resíduos, permitindo uma compreensão mais profunda dos padrões subjacentes e variações presentes ao longo do tempo.
+        Essa abordagem facilita a análise individual de cada componente, auxiliando na identificação de informações relevantes para modelagem e previsão.
         '''
-        st.plotly_chart(plot_ts(df), use_container_width = True)
-        st.plotly_chart(decompose(df, 'Decomposição da Série Temporal - Fechamento da base'), use_container_width = True)
+        st.plotly_chart(plot_ts(df_st), use_container_width = True)
+        st.plotly_chart(decompose(df_st, 'Decomposição da Série Temporal - Fechamento da base'), use_container_width = True)
         '''
         #### Teste Augmented Dickey Fuller
         Teste estatístico usado para determinar se uma série temporal possui raiz unitária, o que indica a presença de não-estacionariedade na série
@@ -124,7 +136,7 @@ def main():
             st.write("  - H1: A série é estacionária.")
             if st.button('Executar Teste ADF'):
                 with col2:
-                    test_adfuller_streamlit(df['Último'])
+                    test_adfuller_streamlit(df_st['Último'])
                 with col3:
                     st.write("Resultado")
                     st.write("---")
@@ -132,6 +144,10 @@ def main():
     with tab2:
         '''
         ## Diferenciação da Série Temporal
+
+        A diferenciação de uma série não estacionária é crucial para transformá-la em uma série estacionária, permitindo a aplicação de técnicas estatísticas e modelos de previsão.
+        Isso é fundamental para compreender padrões temporais e obter previsões mais precisas.
+
             - Remover tendência e sazonalidade, fazer a aproximação(transformada logaritmo e subtrair da média móvel)
             - Média móvel aplicada a linha da tendencia
             - Janela móvel de tamanho 12 meses é aplicada sobre os dados
@@ -139,7 +155,7 @@ def main():
             - Subtrair a média móvel
             - Derivadas de um número de polinômio de primeiro grau deixando mais estacionaria.
         '''
-        st.plotly_chart(data_diff(df), use_container_width = True)
+        st.plotly_chart(data_diff(df_st), use_container_width = True)
         '''
         #### Novo Teste Augmented Dickey Fuller
         '''
@@ -151,7 +167,7 @@ def main():
             st.write("  - H1: A série é estacionária.")
             if st.button('Executar Novo Teste ADF'):
                 with col2:
-                    test_adfuller_streamlit(df['Último'])
+                    test_adfuller_streamlit(df_st['Último'])
                 with col3:
                     st.write("Resultado")
                     st.write("---")
@@ -160,20 +176,25 @@ def main():
     with tab3:
         '''
         ## Autocorrelação (ACF) e Autocorrelação parcial (PACF)
+
+        Os gráficos de autocorrelação (ACF) e autocorrelação parcial (PACF) são ferramentas essenciais na análise de séries temporais.
+        ACF revela correlações em diferentes defasagens, enquanto PACF ajuda a identificar correlações diretas e eliminação de defasagens irrelevantes em modelos de previsão.
+        Ao observar onde essas correlações se tornam não significativas nos gráficos PACF e ACF, você pode obter sugestões para os parâmetros Q (ordem do termo MA) e P (ordem do termo AR) para modelos como o ARMA,
+        ARIMA ou SARIMA, os quais ajudam a modelar adequadamente a série temporal.
+
         - 5% ACF (intervalo de confiança).
         - 1.96/sqrt(N-d)
             - **N** número de pontos e **d** é o número de vezes que os dados foram diferenciamos (intervalo de confiança para estimativas de autocorrelação significativa).
         '''
-        st.plotly_chart(acf_pacf(df), use_container_width = True)
+        st.plotly_chart(acf_pacf(df_st), use_container_width = True)
         st.write("  Ordem de diferenciação **D** = 1 (Foi necessária 1 diferenciação para tornar a série estacionaria)")
         st.write("  **Q acf** = 0.915")
         st.write("  **P pacf** = 0.915")
 
     with tab4:
         '''
-        # Avaliação dos modelos
+        ## Avaliação dos modelos - Métricas de Erro em Previsões
         '''
-        st.title("Métricas de Erro em Previsões")
         st.subheader("MAPE - Mean Absolute Percentage Error")
         st.latex(mape_formula)
         st.write(mape_explanation)
@@ -183,6 +204,10 @@ def main():
         st.subheader("SMAPE - Symmetric Mean Absolute Percentage Error")
         st.latex(smape_formula)
         st.write(smape_explanation)
+        '''
+        É evidente uma consistência na ordem dos modelos avaliados em relação aos erros (MAPE, WMAPE, SMAPE), considerando a mesma base de dados do desafio.
+        Essa coerência simplifica a identificação dos modelos com melhor desempenho, oferecendo uma maneira clara de determinar suas eficácias na análise dos dados fornecidos.
+        '''
         st.plotly_chart(plot_error(df_mesclado, 'mape', 'MAPE', 'MAPE (Mean Absolute Percentage Error)'), use_container_width = True)
         st.plotly_chart(plot_error(df_mesclado, 'wmape', 'wMAPE', 'wMAPE (Weighted Mean Absolute Percentage Error)'), use_container_width = True)
         st.plotly_chart(plot_error(df_mesclado, 'smape', 'sMAPE', 'sMAPE (Weighted Mean Absolute Percentage Error)'), use_container_width = True)
@@ -190,6 +215,9 @@ def main():
     with tab5:
         '''
         ## Explicação de Modelos de Previsão de Séries Temporais
+
+        Modelos de séries temporais são estruturas analíticas que visam compreender e prever padrões em dados sequenciais ao longo do tempo, permitindo a captura de tendências, sazonalidades e variações temporais subjacentes.
+        Esses modelos são fundamentais para a tomada de decisões.
         '''
         intro_text = (
             "Este aplicativo apresenta explicações dos seguintes modelos de previsão de séries temporais que são amplamente usados para avaliação:"
@@ -239,7 +267,7 @@ def main():
         col1, col2 = st.columns([1, 2])
 
         with col1:
-            selected_model = st.radio("Selecione um modelo", list(model_explanations.keys()))
+            selected_model = st.radio("Melhores modelos por desempenho", list(model_explanations.keys()))
 
         with col2:
             st.write(intro_text)
@@ -247,7 +275,10 @@ def main():
             st.write(model_explanations[selected_model]) # type: ignore
     with tab6:
         '''
-        # Modelo com melhor desempenho
+        ## Modelo com melhor desempenho
+
+        Após a avaliação dos erros (MAPE, WMAPE, SMAPE) gerados pelo modelo, observou-se que o Seasonal Exponential Smoothing Otimizado não somente demonstrou o melhor ajuste aos dados apresentados,
+        mas também se destacou ao oferecer um desempenho superior com um custo computacional reduzido, consolidando-se assim como a escolha mais adequada para o desafio em questão.
         '''
         txt = (
             "StatsForecast (Seasonal Exponential Smoothing Otimizado)"
@@ -259,10 +290,9 @@ def main():
         st.code("model = StatsForecast(models=[SeasonalExponentialSmoothingOptimized(season_length=h)], freq='D', n_jobs=-1)")
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=forecast['ds'], y=forecast['y'], mode='lines', name='Original'))
-        fig.add_trace(go.Scatter(x=forecast['ds'], y=forecast['SeasESOpt'], mode='lines', name='Forecast'))
+        fig.add_trace(go.Scatter(x=forecast['ds'], y=forecast['SeasESOpt'], mode='lines', name='SeasESOpt'))
         fig.update_layout(
-            xaxis_title='Time',
-            yaxis_title='Population',
+            xaxis_title='Data',
             legend=dict(x=0, y=1),
             xaxis=dict(tickformat='%Y-%m-%d')
         )
