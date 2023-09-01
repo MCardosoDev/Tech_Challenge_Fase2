@@ -8,13 +8,16 @@ from statsmodels.tsa.stattools import adfuller, acf, pacf
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 
 def convert_volume(volume_str):
-    volume_str = volume_str.replace(',', '.')
-    if 'M' in volume_str:
-        return int(float(volume_str.replace('M', '')) * 1_000_000)
-    elif 'K' in volume_str:
-        return int(float(volume_str.replace('K', '')) * 1_000)
+    if isinstance(volume_str, str):  # Check if the value is a string
+        volume_str = volume_str.replace(',', '.')
+        if 'M' in volume_str:
+            return int(float(volume_str.replace('M', '')) * 1_000_000)
+        elif 'K' in volume_str:
+            return int(float(volume_str.replace('K', '')) * 1_000)
+        else:
+            return int(volume_str)
     else:
-        return int(volume_str)
+        return volume_str
 
 def plot_ts(df):
     fig = sp.make_subplots(rows=4, cols=2, subplot_titles=[
@@ -34,7 +37,7 @@ def plot_ts(df):
 
     fig.update_layout(title='Variações e Volumes das Ações', showlegend=False)
     fig.update_layout(
-        width=600,
+        width=1200,
         height=800
     )
     return fig
@@ -67,7 +70,7 @@ def decompose(df, title):
     fig.update_xaxes(title_text='Data', row=4, col=1)
     fig.update_layout(title=title, font=dict(size=12))
     fig.update_layout(
-        width=600,
+        width=1200,
         height=600
     )
     return fig
@@ -82,14 +85,7 @@ def test_adfuller(df):
     for key, value in result[4].items(): #type: ignore
         print(f'\t{key}: {value}')
 
-def data_diff(df):
-    df_log = np.log(df[['Último', 'Abertura', 'Máxima', 'Mínima', 'Vol.', 'y']])
-    df_log_meam = df_log.rolling(12).mean() # type: ignore
-    df_log = (df_log - df_log_meam).dropna()
-    df_diff = df_log.diff(1).dropna()# primeira derivada
-    df_ultimo_diff = df_diff['y']
-    df_ultimo_mean = df_ultimo_diff.rolling(12).mean()
-    df_ultimo_std = df_ultimo_diff.rolling(12).std()
+def data_diff(df_ultimo_diff, df_ultimo_mean, df_ultimo_std):
     trace_diff = go.Scatter(x=df_ultimo_diff.index, y=df_ultimo_diff, mode='lines', name='Variação')
     trace_mean = go.Scatter(x=df_ultimo_mean.index, y=df_ultimo_mean, mode='lines', name='Média', line=dict(color='red'))
     trace_std = go.Scatter(x=df_ultimo_std.index, y=df_ultimo_std, mode='lines', name='Desvio Padrão', line=dict(color='green'))
@@ -100,12 +96,7 @@ def data_diff(df):
     return fig
 
 def test_diff_adfuller(df):
-    df_log = np.log(df[['Último', 'Abertura', 'Máxima', 'Mínima', 'Vol.', 'y']])
-    df_log_meam = df_log.rolling(12).mean() # type: ignore
-    df_log = (df_log - df_log_meam).dropna()
-    df_diff = df_log.diff(1).dropna()# primeira derivada
-    df_ultimo_diff = df_diff['y']
-    result = adfuller(df_ultimo_diff.dropna().values)
+    result = adfuller(df)
     print('Teste ADf')
     print(f'Teste estatistico: {result[0]}')
     print(f'P-Value: {result[1]}')
@@ -135,12 +126,7 @@ def smape_error(y_true, y_pred):
     print(f"SMAPE (Symmetric Mean Absolute Percentage Error): {smape:.2%}")
     return smape
 
-def acf_pacf(df):
-    df_log = np.log(df[['Último', 'Abertura', 'Máxima', 'Mínima', 'Vol.', 'y']])
-    df_log_meam = df_log.rolling(12).mean() # type: ignore
-    df_log = (df_log - df_log_meam).dropna()
-    df_diff = df_log.diff(1).dropna()# primeira derivada
-    df_ultimo_diff = df_diff['y']
+def acf_pacf(df_ultimo_diff):
     fig = sp.make_subplots(rows=1, cols=2, subplot_titles=['ACF - Último Fechamento', 'PACF - Último Fechamento'])
     trace_acf = go.Scatter(x=np.arange(len(autocorrelation_function(df_ultimo_diff, 14))),
                         y=autocorrelation_function(df_ultimo_diff, 14),
@@ -206,7 +192,7 @@ def plot_error(df, erro, label, title):
     fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='lightgray')
     fig.update_xaxes(showgrid=False)
     fig.update_layout(
-        width=600,
+        width=1100,
         height=400
     )
     return fig
