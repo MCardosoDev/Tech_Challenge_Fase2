@@ -6,6 +6,7 @@ import plotly.graph_objs as go
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.stattools import adfuller, acf, pacf
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+import statsmodels.api as sm
 
 def convert_volume(volume_str):
     if isinstance(volume_str, str):  # Check if the value is a string
@@ -196,3 +197,18 @@ def plot_error(df, erro, label, title):
         height=400
     )
     return fig
+
+def plot_acf_pacf(df):
+
+    acf_values = sm.tsa.acf(df['Último'], fft=False)
+    pacf_values = sm.tsa.pacf(df['Último'])
+    
+    fig = sp.make_subplots(rows=1, cols=2, subplot_titles=['ACF - Último Fechamento', 'PACF - Último Fechamento'])
+    fig.add_trace(go.Bar(x=np.arange(len(df.index)), y=acf_values, name='ACF'),row=1, col=1)
+    fig.add_trace(go.Bar(x=np.arange(len(df.index)), y=pacf_values, name='PACF'),row=1, col=2)
+
+    # Atualizar layout e título
+    fig.update_layout(title='ACF e PACF - Último Fechamento', xaxis_title='Lag', yaxis_title='Valor')
+    
+    return fig
+    
