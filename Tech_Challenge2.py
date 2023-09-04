@@ -442,7 +442,7 @@ def main():
         ***Multiple Seasonal Decomposition of Time Series - MSTL*** obteve uma melhor avaliação ao validar o modelo com novos dados.
 
         Como notou-se na decomposição, a série apresenta múltiplas sazonalidades. Além disso também há o desafio do dataset conter dados 
-        caóticos, portanto, é de se esperar que um modelo de múltiplas sazonalidades apresente um bom melhor desempenho.
+        caóticos, portanto, é de se esperar que um modelo de múltiplas sazonalidades apresente um bom desempenho.
          
         Esse modelo não somente demonstrou o melhor ajuste aos dados apresentados, mas também se destacou ao oferecer um desempenho superior com um custo computacional reduzido,
         consolidando-se assim como a escolha mais adequada para o desafio em questão.
